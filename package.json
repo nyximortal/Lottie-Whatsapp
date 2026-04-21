@@ -2,7 +2,7 @@
   "name": "lottie-whatsapp",
   "version": "1.0.0",
   "private": true,
-  "description": "Builder e envio simples de sticker .was para WhatsApp com Baileys.",
+  "description": "Simple .was sticker builder and sender for WhatsApp with Baileys.",
   "main": "src/index.js",
   "scripts": {
     "build:was": "node build-was.js",

@@ -4,6 +4,7 @@ const os = require("os");
 const crypto = require("crypto");
 const sharp = require("sharp");
 const yazl = require("yazl");
+const { t } = require("./i18n");
 const { getTemplateById, getTemplateMap } = require("./templates");
 
 const MIME = {
@@ -34,11 +35,11 @@ function getMime(filePath, mime) {
 
 function toDataUri(buffer, mime) {
   if (!buffer || !Buffer.isBuffer(buffer)) {
-    throw new Error("Buffer inválido.");
+    throw new Error(t("runtime.invalidBuffer"));
   }
 
   if (!mime) {
-    throw new Error("Mime não detectado. Informe imagePath ou mime.");
+    throw new Error(t("runtime.missingMime"));
   }
 
   return `data:${mime};base64,${buffer.toString("base64")}`;
@@ -66,12 +67,12 @@ function cloneJson(value) {
 
 function getEmbeddedAssetFromJson(json) {
   if (!Array.isArray(json.assets)) {
-    throw new Error("JSON sem assets.");
+    throw new Error(t("runtime.jsonWithoutAssets"));
   }
 
   const asset = json.assets.find(a => typeof a?.p === "string" && a.p.startsWith("data:image/"));
   if (!asset) {
-    throw new Error("Nenhuma imagem base64 encontrada no Lottie.");
+    throw new Error(t("runtime.noEmbeddedImage"));
   }
 
   return asset;
@@ -187,7 +188,7 @@ function applyTemplatePreset(json, templateName) {
     return applyExpandPreset(json);
   }
 
-  throw new Error(`Template desconhecido: ${templateName}`);
+  throw new Error(t("runtime.unknownTemplate", { template: templateName }));
 }
 
 function resolveTemplateConfig({ baseFolder, jsonRelativePath, template }) {
@@ -195,7 +196,7 @@ function resolveTemplateConfig({ baseFolder, jsonRelativePath, template }) {
     const preset = getTemplateById(template);
 
     if (!preset && !baseFolder) {
-      throw new Error(`Template desconhecido: ${template}`);
+      throw new Error(t("runtime.unknownTemplate", { template }));
     }
 
     return {
@@ -358,19 +359,19 @@ async function buildLottieSticker({
 }) {
   const resolved = resolveTemplateConfig({ baseFolder, jsonRelativePath, template });
 
-  if (!fs.existsSync(resolved.baseFolder)) throw new Error("baseFolder não encontrado.");
+  if (!fs.existsSync(resolved.baseFolder)) throw new Error(t("runtime.baseFolderMissing"));
 
   if (!buffer && !imagePath) {
-    throw new Error("Envie imagePath ou buffer.");
+    throw new Error(t("runtime.imageSourceRequired"));
   }
 
   if (!buffer && imagePath) {
-    if (!fs.existsSync(imagePath)) throw new Error("Imagem não encontrada.");
+    if (!fs.existsSync(imagePath)) throw new Error(t("runtime.imageNotFound"));
     buffer = fs.readFileSync(imagePath);
   }
 
   mime = getMime(imagePath, mime);
-  if (!mime) throw new Error("Formato não suportado. Use PNG, JPG, JPEG ou WEBP.");
+  if (!mime) throw new Error(t("runtime.unsupportedFormat"));
 
   const temp = path.join(os.tmpdir(), `lottie-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`);
 

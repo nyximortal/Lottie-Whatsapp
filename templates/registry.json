@@ -3,7 +3,8 @@
     {
       "id": "spin",
       "label": "Spin",
-      "description": "Giro continuo com pulso leve.",
+      "descriptionEn": "Continuous spin with a light pulse.",
+      "descriptionPtbr": "Giro continuo com pulso leve.",
       "baseFolder": "./src/exemple",
       "jsonRelativePath": "animation/animation_secondary.json",
       "preset": "spin"
@@ -11,7 +12,8 @@
     {
       "id": "expand",
       "label": "Expand",
-      "description": "Entrada ampla e assentamento suave.",
+      "descriptionEn": "Wide entrance with a smooth settle.",
+      "descriptionPtbr": "Entrada ampla e assentamento suave.",
       "baseFolder": "./src/exemple",
       "jsonRelativePath": "animation/animation_secondary.json",
       "preset": "expand"

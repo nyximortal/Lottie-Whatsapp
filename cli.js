@@ -2,24 +2,28 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline/promises");
 const readlineCore = require("readline");
+const qrcode = require("qrcode-terminal");
 const { stdin, stdout } = require("process");
 const { buildLottieSticker } = require("./src/index");
 const { hasSavedAuth, ensureWhatsAppSession, sendWasSticker } = require("./src/send");
 const { listValidatedTemplates } = require("./src/templates");
 const { readState, updateState, uniqueRecent, STATE_PATH } = require("./src/state");
+const { DEFAULT_LANGUAGE, normalizeLanguage, setLanguage, t } = require("./src/i18n");
 
 const CWD = process.cwd();
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 const MAX_SCAN_DEPTH = 3;
 const SCAN_SKIP_DIRS = new Set([".git", "node_modules"]);
 
-const MENU_OPTIONS = [
-  { key: "build", label: "Gerar .was", hint: "Escolha imagem, template e saida com ajuda da CLI" },
-  { key: "send", label: "Enviar .was", hint: "Selecione um arquivo existente e envie" },
-  { key: "build-send", label: "Gerar e enviar", hint: "Fluxo completo com menos passos" },
-  { key: "templates", label: "Listar templates", hint: "Ver templates validados no registro" },
-  { key: "exit", label: "Sair", hint: "Encerrar a CLI" }
-];
+function getMenuOptions() {
+  return [
+    { key: "build", label: t("cli.menu.build.label"), hint: t("cli.menu.build.hint") },
+    { key: "send", label: t("cli.menu.send.label"), hint: t("cli.menu.send.hint") },
+    { key: "build-send", label: t("cli.menu.buildSend.label"), hint: t("cli.menu.buildSend.hint") },
+    { key: "templates", label: t("cli.menu.templates.label"), hint: t("cli.menu.templates.hint") },
+    { key: "exit", label: t("cli.menu.exit.label"), hint: t("cli.menu.exit.hint") }
+  ];
+}
 
 function clearScreen() {
   stdout.write("\x1b[2J\x1b[0f");
@@ -28,11 +32,11 @@ function clearScreen() {
 function renderList(title, items, selectedIndex) {
   clearScreen();
   console.log(`${title}\n`);
-  console.log("Use seta para cima/baixo e Enter.\n");
+  console.log(`${t("cli.navigation")}\n`);
 
   items.forEach((item, index) => {
     const isSelected = index === selectedIndex;
-    const line = `${isSelected ? "›" : " "} ${item.label}`;
+    const line = `${isSelected ? ">" : " "} ${item.label}`;
 
     if (isSelected) {
       console.log(`\x1b[1;37;44m${line}\x1b[0m`);
@@ -48,10 +52,10 @@ function renderList(title, items, selectedIndex) {
 
 function selectFromList(title, items, options = {}) {
   if (!Array.isArray(items) || items.length === 0) {
-    throw new Error(`Lista vazia para: ${title}`);
+    throw new Error(t("cli.emptyList", { title }));
   }
 
-  const { allowEscape = false } = options;
+  const { allowEscape = false, initialIndex = 0 } = options;
 
   return new Promise(resolve => {
     readlineCore.emitKeypressEvents(stdin);
@@ -59,7 +63,7 @@ function selectFromList(title, items, options = {}) {
       stdin.setRawMode(true);
     }
 
-    let selectedIndex = 0;
+    let selectedIndex = Math.max(0, Math.min(initialIndex, items.length - 1));
     renderList(title, items, selectedIndex);
 
     const cleanup = () => {
@@ -213,25 +217,28 @@ function ensureWasExtension(filePath) {
 }
 
 async function selectOrTypePath(rl, title, options, config = {}) {
-  const { manualLabel = "Digitar caminho", manualHint = "Informar um caminho manualmente" } = config;
-  const items = [...options];
-  items.push({ key: "__manual__", label: manualLabel, hint: manualHint });
+  const {
+    manualLabel = t("cli.manualPathLabel"),
+    manualHint = t("cli.manualPathHint")
+  } = config;
 
+  const items = [...options, { key: "__manual__", label: manualLabel, hint: manualHint }];
   const selected = await selectFromList(title, items, { allowEscape: true });
+
   if (selected === "__back__") {
     return "__back__";
   }
 
   if (selected === "__manual__") {
-    return path.resolve(await ask(rl, "Caminho"));
+    return path.resolve(await ask(rl, t("cli.pathPrompt")));
   }
 
   return path.resolve(selected);
 }
 
 async function selectImagePath(rl, state) {
-  const recentItems = createUniquePathItems(ensureArray(state.recent.images), "Recente: ");
-  const discoveredItems = createUniquePathItems(discoverImageFiles(), "Encontrado: ");
+  const recentItems = createUniquePathItems(ensureArray(state.recent.images), t("cli.recentPrefix"));
+  const discoveredItems = createUniquePathItems(discoverImageFiles(), t("cli.foundPrefix"));
   const items = [...recentItems];
 
   for (const item of discoveredItems) {
@@ -241,10 +248,10 @@ async function selectImagePath(rl, state) {
   }
 
   if (items.length === 0) {
-    return path.resolve(await ask(rl, "Caminho da imagem", "./img.png"));
+    return path.resolve(await ask(rl, t("cli.imagePathPrompt"), "./img.png"));
   }
 
-  return selectOrTypePath(rl, "Escolha a imagem", items);
+  return selectOrTypePath(rl, t("cli.chooseImage"), items);
 }
 
 function suggestOutputPath(imagePath, state) {
@@ -264,7 +271,7 @@ async function selectOutputPath(rl, state, imagePath) {
     {
       key: suggestedOutput,
       label: path.basename(suggestedOutput),
-      hint: `Sugestao: ${formatPath(suggestedOutput)}`
+      hint: `${t("cli.outputSuggestion")}${formatPath(suggestedOutput)}`
     }
   ];
 
@@ -276,14 +283,15 @@ async function selectOutputPath(rl, state, imagePath) {
     items.push({
       key: filePath,
       label: path.basename(filePath),
-      hint: `Recente: ${formatPath(filePath)}`
+      hint: `${t("cli.outputRecent")}${formatPath(filePath)}`
     });
   }
 
-  const selected = await selectOrTypePath(rl, "Escolha o arquivo de saida (.was)", items, {
-    manualLabel: "Digitar nome/caminho",
-    manualHint: "Se faltar extensao, a CLI adiciona .was automaticamente"
+  const selected = await selectOrTypePath(rl, t("cli.chooseOutput"), items, {
+    manualLabel: t("cli.outputManualLabel"),
+    manualHint: t("cli.outputManualHint")
   });
+
   if (selected === "__back__") {
     return "__back__";
   }
@@ -291,7 +299,7 @@ async function selectOutputPath(rl, state, imagePath) {
   if (!fileExists(selected)) {
     const normalized = ensureWasExtension(selected);
     if (normalized !== selected) {
-      console.log(`Saida ajustada para ${formatPath(normalized)}\n`);
+      console.log(`${t("cli.outputAdjusted", { path: formatPath(normalized) })}\n`);
     }
     return normalized;
   }
@@ -308,7 +316,7 @@ function getValidatedTemplates() {
 async function selectTemplate(state) {
   const templates = getValidatedTemplates();
   if (templates.length === 0) {
-    throw new Error("Nenhum template valido encontrado em templates/registry.json.");
+    throw new Error(t("cli.noValidTemplates"));
   }
 
   const preferredTemplate = pickDefault(state, "template", "");
@@ -324,13 +332,13 @@ async function selectTemplate(state) {
     hint: template.description || formatPath(template.jsonPath)
   }));
 
-  return selectFromList("Escolha o template", items, { allowEscape: true });
+  return selectFromList(t("cli.chooseTemplate"), items, { allowEscape: true });
 }
 
 function parseScale(value, fallback = 1) {
   const scale = Number(String(value || fallback).trim());
   if (!Number.isFinite(scale) || scale <= 0) {
-    throw new Error("Scale invalido. Use um numero maior que 0.");
+    throw new Error(t("cli.invalidScale"));
   }
 
   return scale;
@@ -339,7 +347,7 @@ function parseScale(value, fallback = 1) {
 function normalizeTargetNumber(value) {
   const digits = String(value || "").replace(/\D/g, "");
   if (!digits) {
-    throw new Error("Informe o numero de destino.");
+    throw new Error(t("cli.invalidTarget"));
   }
 
   if (digits.startsWith("55")) {
@@ -361,25 +369,25 @@ async function selectMetadataMode(state) {
   const items = [
     {
       key: "skip",
-      label: "Sem metadados extras",
-      hint: "Gerar rapido sem pack name, publisher e afins"
+      label: t("cli.metadataSkip.label"),
+      hint: t("cli.metadataSkip.hint")
     },
     {
       key: "edit",
-      label: "Preencher agora",
-      hint: "Editar pack name, publisher, emojis e mais"
+      label: t("cli.metadataEdit.label"),
+      hint: t("cli.metadataEdit.hint")
     }
   ];
 
   if (hasSavedMetadata) {
     items.unshift({
       key: "reuse",
-      label: "Reusar metadados salvos",
-      hint: "Usa os ultimos valores preenchidos"
+      label: t("cli.metadataReuse.label"),
+      hint: t("cli.metadataReuse.hint")
     });
   }
 
-  return selectFromList("Metadados do pack", items, { allowEscape: true });
+  return selectFromList(t("cli.metadataTitle"), items, { allowEscape: true });
 }
 
 async function askMetadata(rl, state) {
@@ -392,27 +400,34 @@ async function askMetadata(rl, state) {
     return undefined;
   }
 
-  const packName = await ask(rl, "Nome do pack", pickDefault(state, "packName", ""));
-  const publisher = await ask(rl, "Publisher", pickDefault(state, "publisher", ""));
-  const packId = await ask(rl, "Pack ID", pickDefault(state, "packId", ""));
-  const accessibilityText = await ask(
-    rl,
-    "Accessibility text",
-    pickDefault(state, "accessibilityText", "")
-  );
-  const emojis = await ask(rl, "Emojis separados por virgula", pickDefault(state, "emojis", ""));
+  return {
+    packName: (await ask(rl, t("cli.packName"), pickDefault(state, "packName", ""))) || undefined,
+    publisher: (await ask(rl, t("cli.publisher"), pickDefault(state, "publisher", ""))) || undefined,
+    packId: (await ask(rl, t("cli.packId"), pickDefault(state, "packId", ""))) || undefined,
+    accessibilityText:
+      (await ask(rl, t("cli.accessibilityText"), pickDefault(state, "accessibilityText", ""))) || undefined,
+    emojis: (() => {
+      const fallback = pickDefault(state, "emojis", "");
+      return fallback;
+    })()
+  };
+}
+
+async function finalizeMetadata(rl, state, metadata) {
+  if (metadata === "__back__" || metadata === undefined) {
+    return metadata;
+  }
+
+  const emojiValue = await ask(rl, t("cli.emojis"), pickDefault(state, "emojis", ""));
 
   return {
-    packName: packName || undefined,
-    publisher: publisher || undefined,
-    packId: packId || undefined,
-    accessibilityText: accessibilityText || undefined,
-    emojis: emojis ? emojis.split(",").map(value => value.trim()).filter(Boolean) : undefined
+    ...metadata,
+    emojis: emojiValue ? emojiValue.split(",").map(value => value.trim()).filter(Boolean) : undefined
   };
 }
 
 async function askBuildConfig(rl, state) {
-  console.log("Build\n");
+  console.log(`${t("cli.buildTitle")}\n`);
 
   const imagePath = await selectImagePath(rl, state);
   if (imagePath === "__back__") {
@@ -430,7 +445,8 @@ async function askBuildConfig(rl, state) {
   }
 
   const scaleInput = await ask(rl, "Scale", String(pickDefault(state, "imageScale", 1)));
-  const metadata = await askMetadata(rl, state);
+  const metadataMode = await askMetadata(rl, state);
+  const metadata = await finalizeMetadata(rl, state, metadataMode);
   if (metadata === "__back__") {
     return "__back__";
   }
@@ -458,7 +474,8 @@ async function buildSticker(config) {
       publisher: config.metadata?.publisher || "",
       packId: config.metadata?.packId || "",
       accessibilityText: config.metadata?.accessibilityText || "",
-      emojis: Array.isArray(config.metadata?.emojis) ? config.metadata.emojis.join(",") : ""
+      emojis: Array.isArray(config.metadata?.emojis) ? config.metadata.emojis.join(",") : "",
+      language: state.defaults.language || DEFAULT_LANGUAGE
     },
     recent: {
       ...state.recent,
@@ -467,7 +484,7 @@ async function buildSticker(config) {
     }
   }));
 
-  console.log(`\nGerado: ${result}\n`);
+  console.log(`\n${t("cli.built", { path: result })}\n`);
   return result;
 }
 
@@ -479,12 +496,12 @@ async function selectStickerPath(rl, state, defaults = {}) {
     items.push({
       key: explicitStickerPath,
       label: path.basename(explicitStickerPath),
-      hint: `Recem-gerado: ${formatPath(explicitStickerPath)}`
+      hint: `${t("cli.justBuiltPrefix")}${formatPath(explicitStickerPath)}`
     });
   }
 
-  const recentItems = createUniquePathItems(ensureArray(state.recent.outputs), "Recente: ");
-  const detectedItems = createUniquePathItems(discoverWasFiles(), "Encontrado: ");
+  const recentItems = createUniquePathItems(ensureArray(state.recent.outputs), t("cli.recentPrefix"));
+  const detectedItems = createUniquePathItems(discoverWasFiles(), t("cli.foundPrefix"));
 
   for (const item of [...recentItems, ...detectedItems]) {
     if (!items.some(existing => existing.key === item.key)) {
@@ -493,12 +510,12 @@ async function selectStickerPath(rl, state, defaults = {}) {
   }
 
   if (items.length === 0) {
-    return path.resolve(await ask(rl, "Arquivo .was", "./output.was"));
+    return path.resolve(await ask(rl, t("cli.wasPrompt"), "./output.was"));
   }
 
-  return selectOrTypePath(rl, "Escolha o arquivo .was", items, {
-    manualLabel: "Digitar caminho do .was",
-    manualHint: "Informe um arquivo .was existente para envio"
+  return selectOrTypePath(rl, t("cli.chooseWas"), items, {
+    manualLabel: t("cli.wasManualLabel"),
+    manualHint: t("cli.wasManualHint")
   });
 }
 
@@ -507,10 +524,11 @@ async function selectTargetNumber(rl, state, defaults = {}) {
   const recentTargets = [...new Set([preferredTarget, ...ensureArray(state.recent.targets)].filter(Boolean))];
 
   if (recentTargets.length === 0) {
-    const typedNumber = await ask(rl, "Numero de destino");
+    const typedNumber = await ask(rl, t("cli.destinationPrompt"));
+    const rawDigits = String(typedNumber || "").replace(/\D/g, "");
     const normalized = normalizeTargetNumber(typedNumber);
-    if (normalized !== String(typedNumber).replace(/\D/g, "")) {
-      console.log(`Numero ajustado para ${normalized}\n`);
+    if (normalized !== rawDigits) {
+      console.log(`${t("cli.numberAdjusted", { number: normalized })}\n`);
     }
     return normalized;
   }
@@ -518,25 +536,25 @@ async function selectTargetNumber(rl, state, defaults = {}) {
   const items = recentTargets.map(number => ({
     key: number,
     label: number,
-    hint: number === preferredTarget ? "Ultimo usado" : "Recente"
+    hint: number === preferredTarget ? t("cli.lastUsed") : t("cli.recentShort")
   }));
   items.push({
     key: "__manual__",
-    label: "Digitar numero",
-    hint: "Informar manualmente o destino"
+    label: t("cli.manualNumberLabel"),
+    hint: t("cli.manualNumberHint")
   });
 
-  const selected = await selectFromList("Escolha o destino", items, { allowEscape: true });
+  const selected = await selectFromList(t("cli.chooseDestination"), items, { allowEscape: true });
   if (selected === "__back__") {
     return "__back__";
   }
 
   if (selected === "__manual__") {
-    const typedNumber = await ask(rl, "Numero de destino", preferredTarget);
+    const typedNumber = await ask(rl, t("cli.destinationPrompt"), preferredTarget);
     const rawDigits = String(typedNumber || "").replace(/\D/g, "");
     const normalized = normalizeTargetNumber(typedNumber);
     if (normalized !== rawDigits) {
-      console.log(`Numero ajustado para ${normalized}\n`);
+      console.log(`${t("cli.numberAdjusted", { number: normalized })}\n`);
     }
     return normalized;
   }
@@ -546,18 +564,19 @@ async function selectTargetNumber(rl, state, defaults = {}) {
 
 async function selectAuthFolder(rl, state, defaults = {}) {
   const preferredAuth = path.resolve(defaults.authFolder || pickDefault(state, "authFolder", "./auth_info"));
-  const items = [];
-
-  items.push({
-    key: preferredAuth,
-    label: path.basename(preferredAuth),
-    hint: `Padrao: ${formatPath(preferredAuth)}`
-  });
+  const items = [
+    {
+      key: preferredAuth,
+      label: path.basename(preferredAuth),
+      hint: `${t("cli.defaultAuth")}${formatPath(preferredAuth)}`
+    }
+  ];
 
   const recentAuthFolders = ensureArray(state.recent.authFolders).map(item => path.resolve(item));
   const detectedFolders = [
     ...new Set([preferredAuth, ...recentAuthFolders, ...discoverAuthFolders().map(item => path.resolve(item))])
   ];
+
   for (const folderPath of detectedFolders) {
     if (folderPath === preferredAuth) {
       continue;
@@ -566,26 +585,30 @@ async function selectAuthFolder(rl, state, defaults = {}) {
     items.push({
       key: folderPath,
       label: path.basename(folderPath),
-      hint: `Sessao encontrada: ${formatPath(folderPath)}`
+      hint: `${t("cli.foundSession")}${formatPath(folderPath)}`
     });
   }
 
-  return selectOrTypePath(rl, "Escolha a pasta de auth", items);
+  return selectOrTypePath(rl, t("cli.chooseAuthFolder"), items);
 }
 
 async function askLogoutMode() {
-  const selected = await selectFromList("Sessao do WhatsApp", [
-    {
-      key: false,
-      label: "Manter sessao conectada",
-      hint: "Mais pratico para proximos envios"
-    },
-    {
-      key: true,
-      label: "Desconectar ao finalizar",
-      hint: "Faz logout depois do envio"
-    }
-  ], { allowEscape: true });
+  const selected = await selectFromList(
+    t("cli.whatsAppSession"),
+    [
+      {
+        key: false,
+        label: t("cli.keepSession.label"),
+        hint: t("cli.keepSession.hint")
+      },
+      {
+        key: true,
+        label: t("cli.logout.label"),
+        hint: t("cli.logout.hint")
+      }
+    ],
+    { allowEscape: true }
+  );
 
   if (selected === "__back__") {
     return "__back__";
@@ -595,7 +618,7 @@ async function askLogoutMode() {
 }
 
 async function ensureAuthBeforeSend(rl, state, defaults = {}) {
-  console.log("Autenticacao\n");
+  console.log(`${t("cli.authTitle")}\n`);
 
   const authFolder = await selectAuthFolder(rl, state, defaults);
   if (authFolder === "__back__") {
@@ -603,19 +626,16 @@ async function ensureAuthBeforeSend(rl, state, defaults = {}) {
   }
 
   const alreadyLoggedIn = hasSavedAuth(authFolder);
-
-  if (alreadyLoggedIn) {
-    console.log(`Sessao encontrada em ${formatPath(authFolder)}. Validando login...\n`);
-  } else {
-    console.log(`Nenhuma sessao encontrada em ${formatPath(authFolder)}. Vamos autenticar primeiro.\n`);
-  }
+  console.log(
+    `${alreadyLoggedIn ? t("cli.sessionFound", { path: formatPath(authFolder) }) : t("cli.sessionMissing", { path: formatPath(authFolder) })}\n`
+  );
 
   await ensureWhatsAppSession({
     authFolder,
     onStatus: message => console.log(message),
     onQr: qr => {
       console.log("");
-      require("qrcode-terminal").generate(qr, { small: true });
+      qrcode.generate(qr, { small: true });
       console.log("");
     }
   });
@@ -624,7 +644,8 @@ async function ensureAuthBeforeSend(rl, state, defaults = {}) {
     ...stateValue,
     defaults: {
       ...stateValue.defaults,
-      authFolder
+      authFolder,
+      language: stateValue.defaults.language || DEFAULT_LANGUAGE
     },
     recent: {
       ...stateValue.recent,
@@ -637,7 +658,7 @@ async function ensureAuthBeforeSend(rl, state, defaults = {}) {
 }
 
 async function askSendConfig(rl, state, defaults = {}) {
-  console.log("Enviar\n");
+  console.log(`${t("cli.sendTitle")}\n`);
 
   const stickerPath = await selectStickerPath(rl, state, defaults);
   if (stickerPath === "__back__") {
@@ -681,7 +702,8 @@ async function sendSticker(config) {
       ...state.defaults,
       output: config.stickerPath,
       targetNumber: config.targetNumber,
-      authFolder: config.authFolder
+      authFolder: config.authFolder,
+      language: state.defaults.language || DEFAULT_LANGUAGE
     },
     recent: {
       ...state.recent,
@@ -695,19 +717,19 @@ async function sendSticker(config) {
 }
 
 async function pause(rl) {
-  await rl.question("Pressione Enter para voltar ao menu...");
+  await rl.question(t("cli.pause"));
 }
 
 function renderTemplatesScreen() {
   const templates = listValidatedTemplates();
   clearScreen();
-  console.log("Templates registrados\n");
+  console.log(`${t("cli.templatesTitle")}\n`);
 
   if (templates.length === 0) {
-    console.log("Nenhum template encontrado.\n");
+    console.log(`${t("cli.noTemplatesFound")}\n`);
   } else {
     templates.forEach(template => {
-      const status = template.valid ? "ok" : "invalido";
+      const status = template.valid ? t("cli.templateValid") : t("cli.templateInvalid");
       console.log(`- ${template.label || template.id} (${template.id}) [${status}]`);
       if (template.description) {
         console.log(`  ${template.description}`);
@@ -720,16 +742,51 @@ function renderTemplatesScreen() {
     console.log("");
   }
 
-  console.log(`Estado local salvo em ${STATE_PATH}\n`);
+  console.log(`${t("cli.stateSaved", { path: STATE_PATH })}\n`);
+}
+
+async function chooseLanguage() {
+  const state = readState();
+  const savedLanguage = normalizeLanguage(pickDefault(state, "language", DEFAULT_LANGUAGE));
+  setLanguage(savedLanguage);
+
+  const languages = [
+    {
+      key: "en",
+      label: "English",
+      hint: t("cli.languageHintEn")
+    },
+    {
+      key: "pt-BR",
+      label: "Portugues (Brasil)",
+      hint: t("cli.languageHintPtbr")
+    }
+  ];
+
+  const selected = await selectFromList("Choose language / Escolha o idioma", languages, {
+    initialIndex: savedLanguage === "pt-BR" ? 1 : 0
+  });
+
+  setLanguage(selected);
+  updateState(current => ({
+    ...current,
+    defaults: {
+      ...current.defaults,
+      language: selected
+    }
+  }));
 }
 
 async function main() {
   const rl = readline.createInterface({ input: stdin, output: stdout });
 
   try {
+    await chooseLanguage();
+
     while (true) {
       const state = readState();
-      const action = await selectFromList("Lottie WhatsApp CLI", MENU_OPTIONS);
+      setLanguage(normalizeLanguage(pickDefault(state, "language", DEFAULT_LANGUAGE)));
+      const action = await selectFromList(t("cli.appTitle"), getMenuOptions());
 
       if (action === "build") {
         try {
@@ -739,7 +796,7 @@ async function main() {
           }
           await buildSticker(config);
         } catch (error) {
-          console.error(`\nErro: ${error.message}\n`);
+          console.error(`\n${t("cli.errorPrefix")}: ${error.message}\n`);
         }
         await pause(rl);
         continue;
@@ -757,7 +814,7 @@ async function main() {
           }
           await sendSticker(config);
         } catch (error) {
-          console.error(`\nErro: ${error.message}\n`);
+          console.error(`\n${t("cli.errorPrefix")}: ${error.message}\n`);
         }
         await pause(rl);
         continue;
@@ -780,7 +837,7 @@ async function main() {
           }
           await sendSticker(sendConfig);
         } catch (error) {
-          console.error(`\nErro: ${error.message}\n`);
+          console.error(`\n${t("cli.errorPrefix")}: ${error.message}\n`);
         }
         await pause(rl);
         continue;

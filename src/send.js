@@ -8,6 +8,7 @@ const {
   useMultiFileAuthState,
   fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
+const { t } = require("./i18n");
 
 function hasSavedAuth(authFolder) {
   return fs.existsSync(path.join(path.resolve(authFolder), "creds.json"));
@@ -56,9 +57,7 @@ async function ensureWhatsAppSession({
 
         if (typeof onStatus === "function") {
           onStatus(
-            hadSavedAuth
-              ? "Sessao anterior nao vale mais. Escaneie o novo QR."
-              : "Login necessario. Escaneie o QR com o WhatsApp."
+            hadSavedAuth ? t("send.sessionExpired") : t("send.loginRequired")
           );
         }
 
@@ -72,7 +71,7 @@ async function ensureWhatsAppSession({
       if (connection === "open") {
         await finish(async () => {
           if (typeof onStatus === "function") {
-            onStatus(hadSavedAuth ? "Sessao validada." : "Login concluido.");
+            onStatus(hadSavedAuth ? t("send.sessionValidated") : t("send.loginCompleted"));
           }
 
           sock.end(undefined);
@@ -90,7 +89,7 @@ async function ensureWhatsAppSession({
 
         if (statusCode === DisconnectReason.loggedOut) {
           finished = true;
-          reject(new Error("Sessao desconectada. Gere um novo QR para continuar."));
+          reject(new Error(t("send.sessionDisconnected")));
           return;
         }
 
@@ -98,9 +97,7 @@ async function ensureWhatsAppSession({
 
         if (typeof onStatus === "function") {
           onStatus(
-            sawQr
-              ? "Conexao fechada apos o QR. Aguardando reconexao para concluir o login..."
-              : "Conexao fechada ao validar a sessao. Tentando reconectar..."
+            sawQr ? t("send.connectionClosedAfterQr") : t("send.connectionClosedValidating")
           );
         }
 
@@ -129,18 +126,18 @@ async function sendWasSticker({
   const normalizedTarget = String(targetNumber || "").replace(/\D/g, "");
 
   if (!normalizedTarget) {
-    throw new Error("Informe o numero de destino.");
+    throw new Error(t("send.targetRequired"));
   }
 
   if (!fs.existsSync(resolvedStickerPath)) {
-    throw new Error(`Arquivo .was nao encontrado: ${resolvedStickerPath}`);
+    throw new Error(t("send.fileNotFound", { path: resolvedStickerPath }));
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(resolvedAuthFolder);
   const { version } = await fetchLatestBaileysVersion();
 
   if (typeof onStatus === "function") {
-    onStatus(`Conectando ao WhatsApp para enviar ${path.basename(resolvedStickerPath)}...`);
+    onStatus(t("send.connectingToSend", { file: path.basename(resolvedStickerPath) }));
   }
 
   return new Promise((resolve, reject) => {
@@ -171,12 +168,12 @@ async function sendWasSticker({
 
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (connection === "connecting" && typeof onStatus === "function") {
-        onStatus("Conectando sessao de envio...");
+        onStatus(t("send.connectingSession"));
       }
 
       if (qr) {
         if (typeof onStatus === "function") {
-          onStatus("QR gerado. Escaneie com o WhatsApp no celular.");
+          onStatus(t("send.qrGenerated"));
         }
 
         if (typeof onQr === "function") {
@@ -193,7 +190,7 @@ async function sendWasSticker({
           const jid = `${normalizedTarget}@s.whatsapp.net`;
 
           if (typeof onStatus === "function") {
-            onStatus(`Sessao conectada. Enviando sticker para ${normalizedTarget}...`);
+            onStatus(t("send.sessionConnected", { number: normalizedTarget }));
           }
 
           await sock.sendMessage(jid, {
@@ -202,7 +199,7 @@ async function sendWasSticker({
           });
 
           if (typeof onStatus === "function") {
-            onStatus(`Sticker enviado para ${normalizedTarget}`);
+            onStatus(t("send.stickerSent", { number: normalizedTarget }));
           }
 
           if (logoutOnSuccess) {
@@ -229,14 +226,14 @@ async function sendWasSticker({
 
         if (statusCode === DisconnectReason.loggedOut) {
           finished = true;
-          reject(new Error("Sessao desconectada do WhatsApp. Rode novamente para gerar outro QR."));
+          reject(new Error(t("send.sessionDisconnectedAgain")));
           return;
         }
 
         finished = true;
 
         if (typeof onStatus === "function") {
-          onStatus("Conexao fechada antes do envio. Tentando reconectar...");
+          onStatus(t("send.connectionClosedBeforeSend"));
         }
 
         setTimeout(() => {

@@ -1,19 +1,17 @@
 const path = require("path");
 const { buildLottieSticker, TEMPLATE_PRESETS } = require("./src/index");
+const { normalizeLanguage, setLanguage, t } = require("./src/i18n");
 
 const TEMPLATE_NAMES = Object.keys(TEMPLATE_PRESETS);
 
 function printUsage() {
-  console.log(`Uso:
-  node build-was.js --image ./img.png [--output ./sticker.was] [--scale 1.2]
-                     [--template ${TEMPLATE_NAMES.join("|")}]
-                     [--pack-name "Meu Pack"] [--publisher "Meu Nome"]
-                     [--pack-id "uuid-ou-id"] [--accessibility-text "Descricao"]
-                     [--emojis "😀,🔥"]
-                     [--base-folder ./src/exemple]
-                     [--json animation/animation_secondary.json]
-                     [--no-fit]
-  node build-was.js --list-templates`);
+  console.log(t("buildWas.usage", { templates: TEMPLATE_NAMES.join("|") }));
+}
+
+function detectLanguage(argv) {
+  const langFlagIndex = argv.findIndex(arg => arg === "--lang");
+  const explicitLang = langFlagIndex >= 0 ? argv[langFlagIndex + 1] : "";
+  return normalizeLanguage(explicitLang || process.env.LOTTIE_WHATSAPP_LANG);
 }
 
 function parseArgs(argv) {
@@ -23,7 +21,7 @@ function parseArgs(argv) {
     const arg = argv[i];
 
     if (!arg.startsWith("--")) {
-      throw new Error(`Argumento invalido: ${arg}`);
+      throw new Error(t("buildWas.invalidArg", { arg }));
     }
 
     const key = arg.slice(2);
@@ -40,7 +38,7 @@ function parseArgs(argv) {
 
     const value = argv[i + 1];
     if (!value || value.startsWith("--")) {
-      throw new Error(`Valor ausente para --${key}`);
+      throw new Error(t("buildWas.missingValue", { key }));
     }
 
     args[key] = value;
@@ -51,6 +49,7 @@ function parseArgs(argv) {
 }
 
 async function main() {
+  setLanguage(detectLanguage(process.argv.slice(2)));
   const args = parseArgs(process.argv.slice(2));
 
   if (args.listTemplates) {
@@ -79,11 +78,11 @@ async function main() {
   };
 
   if (!Number.isFinite(imageScale) || imageScale <= 0) {
-    throw new Error("Scale invalido. Use um numero maior que 0.");
+    throw new Error(t("cli.invalidScale"));
   }
 
   if (!TEMPLATE_PRESETS[template]) {
-    throw new Error(`Template invalido. Use um destes: ${TEMPLATE_NAMES.join(", ")}`);
+    throw new Error(t("buildWas.invalidTemplate", { templates: TEMPLATE_NAMES.join(", ") }));
   }
 
   const result = await buildLottieSticker({

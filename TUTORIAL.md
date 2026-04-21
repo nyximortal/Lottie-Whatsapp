@@ -1,113 +1,120 @@
 # Tutorial
 
-Guia para quem nunca usou Node.js, terminal ou este projeto antes.
+Guide for people who have never used Node.js, the terminal, or this project before.
 
-## Antes de começar
+Portuguese version: [TUTORIAL_ptbr.md](./TUTORIAL_ptbr.md)
 
-Voce precisa instalar o Node.js 18 ou superior:
+## Before You Start
 
-- download oficial: https://nodejs.org/en/download
+You need Node.js 18 or newer:
 
-Depois de instalar, feche e abra o terminal de novo.
+- Official download: https://nodejs.org/en/download
 
-Para conferir se deu certo, rode:
+After installing it, close the terminal and open it again.
+
+To confirm the installation:
 
 ```bash
 node -v
 npm -v
 ```
 
-Se os dois comandos mostrarem uma versao, o Node foi instalado corretamente.
+If both commands print a version, Node was installed correctly.
 
-## 1. Baixar o projeto
+## 1. Download The Project
 
-Se voce ja baixou o projeto em `.zip`, extraia a pasta e abra essa pasta no terminal.
+If you already downloaded the project as a `.zip`, extract it and open that folder in the terminal.
 
-Se voce usa Git, pode clonar com:
+If you use Git, you can clone it with:
 
 ```bash
 git clone https://github.com/nyximortal/Lottie-Whatsapp.git
 cd Lottie-Whatsapp
 ```
 
-## 2. Instalar as dependencias
+## 2. Install Dependencies
 
-Dentro da pasta do projeto, rode:
+Inside the project folder, run:
 
 ```bash
 npm install
 ```
 
-Isso baixa tudo que o projeto precisa.
+That installs everything the project needs.
 
-## 3. Rodar a interface guiada
+## 3. Run The Guided Interface
 
-O jeito mais simples para iniciantes e usar a CLI interativa:
+The simplest option for beginners is the interactive CLI:
 
 ```bash
 npm run cli
 ```
 
-Ela permite:
+At startup it asks whether you want:
 
-- escolher uma imagem
-- gerar o arquivo `.was`
-- selecionar um template
-- enviar o sticker no WhatsApp
+- English
+- Portuguese (Brazil)
 
-## 4. O que voce precisa ter em maos
+Then it lets you:
 
-Antes de usar, separe:
+- choose an image
+- build the `.was` file
+- choose a template
+- send the sticker to WhatsApp
 
-- uma imagem em `.png`, `.jpg`, `.jpeg` ou `.webp`
-- o numero de telefone que vai receber o sticker
-- o WhatsApp no celular para escanear o QR code
+## 4. What You Need Ready
 
-## 5. Primeiro envio no WhatsApp
+Before using it, have these ready:
 
-Na primeira vez que voce enviar um sticker:
+- an image in `.png`, `.jpg`, `.jpeg`, or `.webp`
+- the phone number that will receive the sticker
+- WhatsApp on your phone to scan the QR code
 
-1. o terminal vai mostrar um QR code
-2. abra o WhatsApp no celular
-3. entre em `Aparelhos conectados`
-4. toque em `Conectar um aparelho`
-5. escaneie o QR code do terminal
+## 5. First WhatsApp Login
 
-Depois disso, a sessao fica salva na pasta `./auth_info`.
+The first time you send a sticker:
+
+1. the terminal shows a QR code
+2. open WhatsApp on your phone
+3. go to `Linked devices`
+4. tap `Link a device`
+5. scan the QR code shown in the terminal
+
+After that, the session is saved in `./auth_info`.
 
 ## Windows
 
-### Instalar o Node
+### Install Node
 
-1. Abra o site oficial: https://nodejs.org/en/download
-2. Baixe a versao LTS para Windows.
-3. Execute o instalador.
-4. Avance com as opcoes padrao.
-5. Abra o `PowerShell` ou `Prompt de Comando`.
+1. Open the official site: https://nodejs.org/en/download
+2. Download the LTS version for Windows.
+3. Run the installer.
+4. Continue with the default options.
+5. Open `PowerShell` or `Command Prompt`.
 
-Teste:
+Test it:
 
 ```powershell
 node -v
 npm -v
 ```
 
-### Abrir a pasta do projeto
+### Open The Project Folder
 
-Se a pasta estiver em `Downloads`, por exemplo:
+If the folder is in `Downloads`, for example:
 
 ```powershell
 cd $HOME\Downloads\Lottie-Whatsapp
 ```
 
-Se preferir:
+Or:
 
-1. abra a pasta no Explorador
-2. clique na barra de endereco
-3. digite `powershell`
-4. pressione `Enter`
+1. open the folder in File Explorer
+2. click the address bar
+3. type `powershell`
+4. press `Enter`
 
-### Instalar e rodar
+### Install And Run
 
 ```powershell
 npm install
@@ -116,123 +123,123 @@ npm run cli
 
 ## Linux
 
-### Instalar o Node
+### Install Node
 
-Use o site oficial se quiser o jeito mais simples:
+Use the official website if you want the simplest route:
 
 - https://nodejs.org/en/download
 
-Em muitas distros, instalar pelo gerenciador de pacotes tambem funciona, mas a versao pode vir antiga. Se acontecer, prefira o instalador oficial.
+On many distros, the package manager also works, but the version may be too old. If that happens, use the official installer instead.
 
-Depois confirme:
+Then confirm:
 
 ```bash
 node -v
 npm -v
 ```
 
-### Abrir a pasta do projeto
+### Open The Project Folder
 
-Exemplo:
+Example:
 
 ```bash
 cd ~/Downloads/Lottie-Whatsapp
 ```
 
-### Instalar e rodar
+### Install And Run
 
 ```bash
 npm install
 npm run cli
 ```
 
-## Fluxo mais simples para usar
+## Simplest Flow
 
-1. coloque sua imagem dentro da pasta do projeto
-2. rode `npm run cli`
-3. escolha `Gerar e enviar`
-4. selecione a imagem
-5. escolha o template
-6. defina o nome do arquivo de saida
-7. informe o numero de destino
-8. escaneie o QR code se for a primeira vez
+1. put your image inside the project folder
+2. run `npm run cli`
+3. choose the CLI language
+4. choose `Build and send`
+5. select the image
+6. choose the template
+7. define the output file name
+8. enter the destination number
+9. scan the QR code if this is your first time
 
-## Enviar por linha de comando
+## Send From The Command Line
 
-Se voce nao quiser usar a interface guiada:
+If you do not want the guided interface:
 
-### Gerar o arquivo `.was`
-
-```bash
-npm run build:was -- --image ./sua-imagem.png --output ./meu-sticker.was --template expand
-```
-
-### Enviar para o WhatsApp
+### Build The `.was` File
 
 ```bash
-npm run send:was -- --to 5511999999999 --file ./meu-sticker.was
+npm run build:was -- --image ./your-image.png --output ./my-sticker.was --template expand --lang en
 ```
 
-## Dicas importantes
+### Send To WhatsApp
 
-- o numero deve estar no formato internacional
-- se voce informar sem `55`, a CLI tenta completar automaticamente
-- o projeto nao precisa de `zip` instalado no sistema
-- o arquivo de sessao do WhatsApp fica em `./auth_info`
-- o historico da CLI fica em `./.lottie-whatsapp.json`
+```bash
+npm run send:was -- --to 5511999999999 --file ./my-sticker.was --lang en
+```
 
-## Problemas comuns
+## Important Tips
 
-### `node` nao e reconhecido
+- the number must be in international format
+- if you omit `55`, the CLI tries to add it automatically
+- the project does not require `zip` installed on the system
+- the WhatsApp session file stays in `./auth_info`
+- CLI history and saved preferences stay in `./.lottie-whatsapp.json`
 
-O Node nao foi instalado corretamente, ou o terminal estava aberto antes da instalacao.
+## Common Problems
 
-Feche o terminal, abra de novo e teste:
+### `node` Is Not Recognized
+
+Node was not installed correctly, or the terminal was already open before installation.
+
+Close the terminal, open it again, and run:
 
 ```bash
 node -v
 npm -v
 ```
 
-Se ainda falhar, reinstale usando o site oficial:
+If it still fails, reinstall from the official website:
 
 - https://nodejs.org/en/download
 
-### `npm install` falhou
+### `npm install` Failed
 
-Confira primeiro se o Node e o npm estao instalados:
+First confirm that Node and npm are installed:
 
 ```bash
 node -v
 npm -v
 ```
 
-Se isso funcionar, tente rodar de novo dentro da pasta do projeto:
+If that works, run the command again inside the project folder:
 
 ```bash
 npm install
 ```
 
-### O QR code nao apareceu
+### The QR Code Did Not Appear
 
-Feche o processo com `Ctrl + C` e rode novamente:
+Stop the process with `Ctrl + C` and run it again:
 
 ```bash
 npm run cli
 ```
 
-### O sticker nao foi enviado
+Then check:
 
-Confira:
+- whether the terminal showed any error
+- whether the network connection is stable
+- whether a previous session needs to be refreshed
 
-- se o numero esta correto
-- se o QR foi escaneado
-- se o arquivo `.was` foi gerado
-- se o WhatsApp Web do aparelho ainda esta conectado
-- a figurinha as vezes não aparece no celular, voce tem que abrir o whatsapp web e favoritar ela
+### The Sticker Was Not Sent
 
-## Arquivos criados pelo projeto
+Check:
 
-- `./auth_info`: guarda a sessao do WhatsApp
-- `./.lottie-whatsapp.json`: guarda historico e valores recentes da CLI
-- `./output.was` ou outro nome escolhido: sticker gerado
+- whether the target number is correct
+- whether the `.was` file exists
+- whether the QR code was scanned
+- whether WhatsApp is still connected

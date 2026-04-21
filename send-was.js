@@ -1,11 +1,16 @@
 const path = require("path");
 const qrcode = require("qrcode-terminal");
 const { sendWasSticker } = require("./src/send");
+const { normalizeLanguage, setLanguage, t } = require("./src/i18n");
 
 function printUsage() {
-  console.log(`Uso:
-  node send-was.js --to 5511999999999 [--file ./output.was]
-                   [--auth-dir ./auth_info] [--logout]`);
+  console.log(t("sendWas.usage"));
+}
+
+function detectLanguage(argv) {
+  const langFlagIndex = argv.findIndex(arg => arg === "--lang");
+  const explicitLang = langFlagIndex >= 0 ? argv[langFlagIndex + 1] : "";
+  return normalizeLanguage(explicitLang || process.env.LOTTIE_WHATSAPP_LANG);
 }
 
 function parseArgs(argv) {
@@ -15,7 +20,7 @@ function parseArgs(argv) {
     const arg = argv[i];
 
     if (!arg.startsWith("--")) {
-      throw new Error(`Argumento invalido: ${arg}`);
+      throw new Error(t("sendWas.invalidArg", { arg }));
     }
 
     const key = arg.slice(2);
@@ -27,7 +32,7 @@ function parseArgs(argv) {
 
     const value = argv[i + 1];
     if (!value || value.startsWith("--")) {
-      throw new Error(`Valor ausente para --${key}`);
+      throw new Error(t("sendWas.missingValue", { key }));
     }
 
     args[key] = value;
@@ -45,7 +50,7 @@ function getConfig() {
 
   if (!targetNumber) {
     printUsage();
-    throw new Error("Informe o numero de destino com --to ou WHATSAPP_TARGET.");
+    throw new Error(t("sendWas.targetRequired"));
   }
 
   return {
@@ -55,6 +60,8 @@ function getConfig() {
     logoutOnSuccess: Boolean(args.logout)
   };
 }
+
+setLanguage(detectLanguage(process.argv.slice(2)));
 
 sendWasSticker({
   ...getConfig(),
