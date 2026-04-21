@@ -44,6 +44,12 @@ Current behavior:
 npm run cli
 ```
 
+For Termux/Android:
+
+```bash
+npm run cli:termux
+```
+
 The CLI now:
 
 - asks whether you want English or Portuguese
@@ -64,7 +70,9 @@ Both are ignored by Git and can be removed without affecting the source code.
 ## Scripts
 
 - `npm run cli`: guided build/send flow
+- `npm run cli:termux`: guided build/send flow using `jimp`
 - `npm run build:was`: argument-based build flow
+- `npm run build:was:termux`: argument-based build flow using `jimp`
 - `npm run send:was`: argument-based send flow
 
 ## Build From The Command Line

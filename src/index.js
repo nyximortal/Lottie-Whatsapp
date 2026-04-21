@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
-const sharp = require("sharp");
 const yazl = require("yazl");
 const { t } = require("./i18n");
 const { getTemplateById, getTemplateMap } = require("./templates");
@@ -15,6 +14,7 @@ const MIME = {
 };
 
 const DEFAULT_BASE_FOLDER = path.resolve(__dirname, "exemple");
+const SUPPORTED_IMAGE_ENGINES = new Set(["sharp", "jimp"]);
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -289,10 +289,38 @@ function applyMetadataOverrides(baseFolder, metadata = {}) {
   fs.writeFileSync(metadataPath, JSON.stringify(current));
 }
 
-async function prepareImageBuffer(buffer, fit, width, height) {
+function resolveImageEngine(imageEngine) {
+  const resolvedEngine = String(imageEngine || process.env.LOTTIE_IMAGE_ENGINE || "sharp").trim().toLowerCase();
+
+  if (!SUPPORTED_IMAGE_ENGINES.has(resolvedEngine)) {
+    throw new Error(t("runtime.unsupportedImageEngine", { engine: resolvedEngine }));
+  }
+
+  return resolvedEngine;
+}
+
+function loadSharp() {
+  try {
+    return require("sharp");
+  } catch (error) {
+    throw new Error(t("runtime.sharpUnavailable", { message: error.message }));
+  }
+}
+
+function loadJimp() {
+  try {
+    return require("jimp");
+  } catch (error) {
+    throw new Error(t("runtime.jimpUnavailable", { message: error.message }));
+  }
+}
+
+async function prepareImageBufferWithSharp(buffer, fit, width, height) {
   if (!fit || !width || !height) {
     return buffer;
   }
+
+  const sharp = loadSharp();
 
   return sharp(buffer)
     .resize(width, height, {
@@ -301,6 +329,34 @@ async function prepareImageBuffer(buffer, fit, width, height) {
     })
     .png()
     .toBuffer();
+}
+
+async function prepareImageBufferWithJimp(buffer, fit, width, height) {
+  if (!fit || !width || !height) {
+    return buffer;
+  }
+
+  const { Jimp, JimpMime, HorizontalAlign, VerticalAlign } = loadJimp();
+  const image = await Jimp.read(buffer);
+
+  image.background = 0x00000000;
+  image.contain({
+    w: width,
+    h: height,
+    align: HorizontalAlign.CENTER | VerticalAlign.MIDDLE
+  });
+
+  return image.getBuffer(JimpMime.png);
+}
+
+async function prepareImageBuffer(buffer, fit, width, height, imageEngine) {
+  const resolvedEngine = resolveImageEngine(imageEngine);
+
+  if (resolvedEngine === "jimp") {
+    return prepareImageBufferWithJimp(buffer, fit, width, height);
+  }
+
+  return prepareImageBufferWithSharp(buffer, fit, width, height);
 }
 
 function listFilesRecursive(dirPath, basePath = dirPath) {
@@ -355,6 +411,7 @@ async function buildLottieSticker({
   jsonRelativePath = "animation/animation_secondary.json",
   fitToAsset = true,
   imageScale = 1,
+  imageEngine,
   metadata = {}
 }) {
   const resolved = resolveTemplateConfig({ baseFolder, jsonRelativePath, template });
@@ -382,7 +439,7 @@ async function buildLottieSticker({
     const asset = getEmbeddedAsset(jsonPath);
     const targetWidth = Math.max(1, Math.round(asset.w * imageScale));
     const targetHeight = Math.max(1, Math.round(asset.h * imageScale));
-    buffer = await prepareImageBuffer(buffer, fitToAsset, targetWidth, targetHeight);
+    buffer = await prepareImageBuffer(buffer, fitToAsset, targetWidth, targetHeight, imageEngine);
     mime = "image/png";
     replaceBase64Image(jsonPath, toDataUri(buffer, mime), targetWidth, targetHeight, resolved.template);
     await zipToWas(temp, output);

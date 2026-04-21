@@ -136,6 +136,10 @@ const messages = {
     "runtime.imageSourceRequired": "Provide imagePath or buffer.",
     "runtime.imageNotFound": "Image not found.",
     "runtime.unsupportedFormat": "Unsupported format. Use PNG, JPG, JPEG, or WEBP.",
+    "runtime.unsupportedImageEngine": ({ engine }) => `Unsupported image engine: ${engine}. Use sharp or jimp.`,
+    "runtime.sharpUnavailable": ({ message }) =>
+      `sharp could not be loaded in this environment. Use npm run cli:termux or npm run build:was:termux. Original error: ${message}`,
+    "runtime.jimpUnavailable": ({ message }) => `jimp could not be loaded. Original error: ${message}`,
     "send.sessionExpired": "Previous session is no longer valid. Scan the new QR code.",
     "send.loginRequired": "Login required. Scan the QR code with WhatsApp.",
     "send.sessionValidated": "Session validated.",
@@ -257,6 +261,10 @@ const messages = {
     "runtime.imageSourceRequired": "Envie imagePath ou buffer.",
     "runtime.imageNotFound": "Imagem nao encontrada.",
     "runtime.unsupportedFormat": "Formato nao suportado. Use PNG, JPG, JPEG ou WEBP.",
+    "runtime.unsupportedImageEngine": ({ engine }) => `Engine de imagem nao suportada: ${engine}. Use sharp ou jimp.`,
+    "runtime.sharpUnavailable": ({ message }) =>
+      `sharp nao pode ser carregado neste ambiente. Use npm run cli:termux ou npm run build:was:termux. Erro original: ${message}`,
+    "runtime.jimpUnavailable": ({ message }) => `jimp nao pode ser carregado. Erro original: ${message}`,
     "send.sessionExpired": "Sessao anterior nao vale mais. Escaneie o novo QR.",
     "send.loginRequired": "Login necessario. Escaneie o QR com o WhatsApp.",
     "send.sessionValidated": "Sessao validada.",

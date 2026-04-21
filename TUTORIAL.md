@@ -157,6 +157,7 @@ npm run cli
 
 1. put your image inside the project folder
 2. run `npm run cli`
+   On Termux/Android, run `npm run cli:termux` instead.
 3. choose the CLI language
 4. choose `Build and send`
 5. select the image
@@ -173,6 +174,12 @@ If you do not want the guided interface:
 
 ```bash
 npm run build:was -- --image ./your-image.png --output ./my-sticker.was --template expand --lang en
+```
+
+On Termux/Android:
+
+```bash
+npm run build:was:termux -- --image ./your-image.png --output ./my-sticker.was --template expand --lang en
 ```
 
 ### Send To WhatsApp

@@ -44,6 +44,12 @@ Comportamento atual:
 npm run cli
 ```
 
+No Termux/Android:
+
+```bash
+npm run cli:termux
+```
+
 A CLI agora:
 
 - pergunta se voce quer ingles ou portugues
@@ -64,7 +70,9 @@ Ambos estao ignorados no Git e podem ser removidos sem afetar o codigo do projet
 ## Scripts
 
 - `npm run cli`: fluxo guiado para gerar e enviar
+- `npm run cli:termux`: fluxo guiado usando `jimp`
 - `npm run build:was`: build por argumentos
+- `npm run build:was:termux`: build por argumentos usando `jimp`
 - `npm run send:was`: envio por argumentos
 
 ## Build Por Linha De Comando
