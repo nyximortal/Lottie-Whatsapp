@@ -123,7 +123,7 @@ const messages = {
     "buildWas.missingValue": ({ key }) => `Missing value for --${key}`,
     "buildWas.invalidTemplate": ({ templates }) => `Invalid template. Use one of: ${templates}`,
     "sendWas.usage":
-      "Usage:\n  node send-was.js --to 5511999999999 [--file ./output.was]\n                   [--auth-dir ./auth_info] [--lang en|pt-BR] [--logout]",
+      "Usage:\n  node send-was.js --to 1234567890 [--file ./output.was]\n                   [--auth-dir ./auth_info] [--lang en|pt-BR] [--logout]",
     "sendWas.invalidArg": ({ arg }) => `Invalid argument: ${arg}`,
     "sendWas.missingValue": ({ key }) => `Missing value for --${key}`,
     "sendWas.targetRequired": "Enter the destination number with --to or WHATSAPP_TARGET.",
@@ -244,7 +244,7 @@ const messages = {
     "buildWas.missingValue": ({ key }) => `Valor ausente para --${key}`,
     "buildWas.invalidTemplate": ({ templates }) => `Template invalido. Use um destes: ${templates}`,
     "sendWas.usage":
-      "Uso:\n  node send-was.js --to 5511999999999 [--file ./output.was]\n                   [--auth-dir ./auth_info] [--lang en|pt-BR] [--logout]",
+      "Uso:\n  node send-was.js --to 1234567890 [--file ./output.was]\n                   [--auth-dir ./auth_info] [--lang en|pt-BR] [--logout]",
     "sendWas.invalidArg": ({ arg }) => `Argumento invalido: ${arg}`,
     "sendWas.missingValue": ({ key }) => `Valor ausente para --${key}`,
     "sendWas.targetRequired": "Informe o numero de destino com --to ou WHATSAPP_TARGET.",

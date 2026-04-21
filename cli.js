@@ -350,11 +350,7 @@ function normalizeTargetNumber(value) {
     throw new Error(t("cli.invalidTarget"));
   }
 
-  if (digits.startsWith("55")) {
-    return digits;
-  }
-
-  return `55${digits}`;
+  return digits;
 }
 
 async function selectMetadataMode(state) {

@@ -178,13 +178,12 @@ npm run build:was -- --image ./your-image.png --output ./my-sticker.was --templa
 ### Send To WhatsApp
 
 ```bash
-npm run send:was -- --to 5511999999999 --file ./my-sticker.was --lang en
+npm run send:was -- --to 1234567890 --file ./my-sticker.was --lang en
 ```
 
 ## Important Tips
 
 - the number must be in international format
-- if you omit `55`, the CLI tries to add it automatically
 - the project does not require `zip` installed on the system
 - the WhatsApp session file stays in `./auth_info`
 - CLI history and saved preferences stay in `./.lottie-whatsapp.json`

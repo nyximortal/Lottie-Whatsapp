@@ -51,7 +51,6 @@ A CLI agora:
 - lista arquivos `.was` detectados e recentes
 - valida templates cadastrados
 - tenta validar ou criar a sessao do WhatsApp antes do envio
-- adiciona `55` automaticamente no numero se faltar
 - adiciona `.was` automaticamente no nome de saida se faltar
 - permite voltar nos menus com `Esc`
 
@@ -110,7 +109,7 @@ Opcoes:
 ## Envio Por Linha De Comando
 
 ```bash
-npm run send:was -- --to 5511999999999 --file ./output.was --lang pt-BR
+npm run send:was -- --to 1234567890 --file ./output.was --lang pt-BR
 ```
 
 Opcoes:
