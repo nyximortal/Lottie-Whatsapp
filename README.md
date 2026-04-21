@@ -5,6 +5,7 @@ Gera arquivos `.was` a partir de uma imagem e envia no WhatsApp usando templates
 ## Requisitos
 
 - Node.js 18+
+- download oficial do Node.js: https://nodejs.org/en/download
 
 ## Instalação
 
@@ -13,6 +14,10 @@ npm install
 ```
 
 Nao precisa instalar `zip` no sistema. O `.was` agora e gerado com uma dependencia Node, entao o projeto funciona da mesma forma em Windows, Linux e macOS.
+
+## Tutorial Completo
+
+Para um passo a passo para iniciantes, incluindo instalacao do Node no Windows e Linux, veja [TUTORIAL.md](./TUTORIAL.md).
 
 ## Resumo Das Mudanças
 
