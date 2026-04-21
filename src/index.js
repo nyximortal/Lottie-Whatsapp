@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
-const { execSync } = require("child_process");
 const sharp = require("sharp");
+const yazl = require("yazl");
 const { getTemplateById, getTemplateMap } = require("./templates");
 
 const MIME = {
@@ -302,15 +302,46 @@ async function prepareImageBuffer(buffer, fit, width, height) {
     .toBuffer();
 }
 
+function listFilesRecursive(dirPath, basePath = dirPath) {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const absolutePath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...listFilesRecursive(absolutePath, basePath));
+      continue;
+    }
+
+    files.push({
+      absolutePath,
+      relativePath: path.relative(basePath, absolutePath).split(path.sep).join("/")
+    });
+  }
+
+  return files;
+}
+
 function zipToWas(folder, output) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
-
-  const zipPath = output.replace(/\.was$/i, ".zip");
-  if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
   if (fs.existsSync(output)) fs.unlinkSync(output);
 
-  execSync(`zip -r "${zipPath}" .`, { cwd: folder, stdio: "ignore" });
-  fs.renameSync(zipPath, output);
+  return new Promise((resolve, reject) => {
+    const zipFile = new yazl.ZipFile();
+    const outputStream = fs.createWriteStream(output);
+
+    outputStream.on("close", resolve);
+    outputStream.on("error", reject);
+    zipFile.outputStream.on("error", reject);
+
+    for (const file of listFilesRecursive(folder)) {
+      zipFile.addFile(file.absolutePath, file.relativePath);
+    }
+
+    zipFile.end();
+    zipFile.outputStream.pipe(outputStream);
+  });
 }
 
 async function buildLottieSticker({
@@ -353,7 +384,7 @@ async function buildLottieSticker({
     buffer = await prepareImageBuffer(buffer, fitToAsset, targetWidth, targetHeight);
     mime = "image/png";
     replaceBase64Image(jsonPath, toDataUri(buffer, mime), targetWidth, targetHeight, resolved.template);
-    zipToWas(temp, output);
+    await zipToWas(temp, output);
     return output;
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
