@@ -1,0 +1,20 @@
+{
+  "templates": [
+    {
+      "id": "spin",
+      "label": "Spin",
+      "description": "Giro continuo com pulso leve.",
+      "baseFolder": "./src/exemple",
+      "jsonRelativePath": "animation/animation_secondary.json",
+      "preset": "spin"
+    },
+    {
+      "id": "expand",
+      "label": "Expand",
+      "description": "Entrada ampla e assentamento suave.",
+      "baseFolder": "./src/exemple",
+      "jsonRelativePath": "animation/animation_secondary.json",
+      "preset": "expand"
+    }
+  ]
+}

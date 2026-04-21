@@ -6,8 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "build:was": "node build-was.js",
-    "send:was": "node send-was.js",
-    "example": "node example.js"
+    "cli": "node cli.js",
+    "send:was": "node send-was.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.9",

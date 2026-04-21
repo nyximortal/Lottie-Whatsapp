@@ -4,6 +4,7 @@ const os = require("os");
 const crypto = require("crypto");
 const { execSync } = require("child_process");
 const sharp = require("sharp");
+const { getTemplateById, getTemplateMap } = require("./templates");
 
 const MIME = {
   ".png": "image/png",
@@ -11,6 +12,8 @@ const MIME = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp"
 };
+
+const DEFAULT_BASE_FOLDER = path.resolve(__dirname, "exemple");
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
@@ -49,6 +52,18 @@ function writeLottieJson(jsonPath, json) {
   fs.writeFileSync(jsonPath, JSON.stringify(json));
 }
 
+function readJsonIfExists(jsonPath) {
+  if (!fs.existsSync(jsonPath)) {
+    return null;
+  }
+
+  return JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function getEmbeddedAssetFromJson(json) {
   if (!Array.isArray(json.assets)) {
     throw new Error("JSON sem assets.");
@@ -64,6 +79,137 @@ function getEmbeddedAssetFromJson(json) {
 
 function getEmbeddedAsset(jsonPath) {
   return getEmbeddedAssetFromJson(readLottieJson(jsonPath));
+}
+
+function getImageLayers(json) {
+  if (!Array.isArray(json.layers)) {
+    return [];
+  }
+
+  return json.layers.filter(layer => layer?.ty === 2 && typeof layer?.refId === "string");
+}
+
+function setAnimatedScalar(property, keyframes) {
+  if (!property) {
+    return;
+  }
+
+  property.a = 1;
+  property.k = keyframes;
+}
+
+function setAnimatedScale(property, keyframes) {
+  if (!property) {
+    return;
+  }
+
+  property.a = 1;
+  property.k = keyframes;
+}
+
+function applySpinPreset(json) {
+  return json;
+}
+
+function applyExpandPreset(json) {
+  const layers = getImageLayers(json);
+
+  for (const layer of layers) {
+    setAnimatedScalar(layer.ks?.r, [
+      {
+        t: 0,
+        s: [0],
+        e: [0]
+      },
+      {
+        t: 240
+      }
+    ]);
+
+    setAnimatedScalar(layer.ks?.o, [
+      {
+        t: 0,
+        s: [0],
+        e: [100]
+      },
+      {
+        t: 16,
+        s: [100],
+        e: [100]
+      },
+      {
+        t: 240
+      }
+    ]);
+
+    setAnimatedScale(layer.ks?.s, [
+      {
+        t: 0,
+        s: [30, 30, 100],
+        e: [125, 125, 100]
+      },
+      {
+        t: 36,
+        s: [125, 125, 100],
+        e: [100, 100, 100]
+      },
+      {
+        t: 72,
+        s: [100, 100, 100],
+        e: [104, 104, 100]
+      },
+      {
+        t: 132,
+        s: [104, 104, 100],
+        e: [100, 100, 100]
+      },
+      {
+        t: 192,
+        s: [100, 100, 100],
+        e: [102, 102, 100]
+      },
+      {
+        t: 240,
+        s: [102, 102, 100]
+      }
+    ]);
+  }
+
+  return json;
+}
+
+function applyTemplatePreset(json, templateName) {
+  if (!templateName || templateName === "spin" || templateName === "none") {
+    return applySpinPreset(json);
+  }
+
+  if (templateName === "expand") {
+    return applyExpandPreset(json);
+  }
+
+  throw new Error(`Template desconhecido: ${templateName}`);
+}
+
+function resolveTemplateConfig({ baseFolder, jsonRelativePath, template }) {
+  if (template) {
+    const preset = getTemplateById(template);
+
+    if (!preset && !baseFolder) {
+      throw new Error(`Template desconhecido: ${template}`);
+    }
+
+    return {
+      baseFolder: baseFolder || preset.baseFolder,
+      jsonRelativePath: jsonRelativePath || preset.jsonRelativePath,
+      template: preset?.preset || template
+    };
+  }
+
+  return {
+    baseFolder: baseFolder || DEFAULT_BASE_FOLDER,
+    jsonRelativePath: jsonRelativePath || "animation/animation_secondary.json",
+    template: "spin"
+  };
 }
 
 function setStaticPoint(property, point) {
@@ -97,8 +243,8 @@ function updateAssetSize(json, asset, width, height) {
   }
 }
 
-function replaceBase64Image(jsonPath, dataUri, width, height) {
-  const json = readLottieJson(jsonPath);
+function replaceBase64Image(jsonPath, dataUri, width, height, template) {
+  const json = applyTemplatePreset(cloneJson(readLottieJson(jsonPath)), template);
   const asset = getEmbeddedAssetFromJson(json);
 
   asset.p = dataUri;
@@ -107,6 +253,39 @@ function replaceBase64Image(jsonPath, dataUri, width, height) {
   }
 
   writeLottieJson(jsonPath, json);
+}
+
+function applyMetadataOverrides(baseFolder, metadata = {}) {
+  const hasValues = Object.values(metadata).some(value => value !== undefined && value !== null && value !== "");
+  if (!hasValues) {
+    return;
+  }
+
+  const metadataPath = path.join(baseFolder, "animation", "animation.json.overridden_metadata");
+  const current = readJsonIfExists(metadataPath) || {};
+
+  if (metadata.packId) {
+    current["sticker-pack-id"] = metadata.packId;
+  }
+
+  if (metadata.packName) {
+    current["sticker-pack-name"] = metadata.packName;
+  }
+
+  if (metadata.publisher !== undefined) {
+    current["sticker-pack-publisher"] = metadata.publisher;
+  }
+
+  if (metadata.accessibilityText) {
+    current["accessibility-text"] = metadata.accessibilityText;
+  }
+
+  if (Array.isArray(metadata.emojis)) {
+    current.emojis = metadata.emojis;
+  }
+
+  fs.mkdirSync(path.dirname(metadataPath), { recursive: true });
+  fs.writeFileSync(metadataPath, JSON.stringify(current));
 }
 
 async function prepareImageBuffer(buffer, fit, width, height) {
@@ -140,11 +319,15 @@ async function buildLottieSticker({
   imagePath,
   buffer,
   mime,
+  template = "spin",
   jsonRelativePath = "animation/animation_secondary.json",
   fitToAsset = true,
-  imageScale = 1
+  imageScale = 1,
+  metadata = {}
 }) {
-  if (!fs.existsSync(baseFolder)) throw new Error("baseFolder não encontrado.");
+  const resolved = resolveTemplateConfig({ baseFolder, jsonRelativePath, template });
+
+  if (!fs.existsSync(resolved.baseFolder)) throw new Error("baseFolder não encontrado.");
 
   if (!buffer && !imagePath) {
     throw new Error("Envie imagePath ou buffer.");
@@ -161,14 +344,15 @@ async function buildLottieSticker({
   const temp = path.join(os.tmpdir(), `lottie-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`);
 
   try {
-    copyDir(baseFolder, temp);
-    const jsonPath = path.join(temp, jsonRelativePath);
+    copyDir(resolved.baseFolder, temp);
+    applyMetadataOverrides(temp, metadata);
+    const jsonPath = path.join(temp, resolved.jsonRelativePath);
     const asset = getEmbeddedAsset(jsonPath);
     const targetWidth = Math.max(1, Math.round(asset.w * imageScale));
     const targetHeight = Math.max(1, Math.round(asset.h * imageScale));
     buffer = await prepareImageBuffer(buffer, fitToAsset, targetWidth, targetHeight);
     mime = "image/png";
-    replaceBase64Image(jsonPath, toDataUri(buffer, mime), targetWidth, targetHeight);
+    replaceBase64Image(jsonPath, toDataUri(buffer, mime), targetWidth, targetHeight, resolved.template);
     zipToWas(temp, output);
     return output;
   } finally {
@@ -176,4 +360,7 @@ async function buildLottieSticker({
   }
 }
 
-module.exports = { buildLottieSticker };
+module.exports = {
+  buildLottieSticker,
+  TEMPLATE_PRESETS: getTemplateMap()
+};

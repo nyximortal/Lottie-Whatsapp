@@ -4,3 +4,4 @@ auth_info/
 *.zip
 .codex
 *:Zone.Identifier
+.lottie-whatsapp.json
