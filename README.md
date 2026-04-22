@@ -1,5 +1,7 @@
 # Lottie WhatsApp Sticker Builder
 
+## Patched: WhatsApp has patched the vulnerability that allowed custom images in WAS; now changing the image has no effect.
+
 Build `.was` sticker files from an image and send them through WhatsApp using Lottie templates with embedded base64 assets.
 
 Portuguese docs:
