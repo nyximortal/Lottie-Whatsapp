@@ -1,5 +1,7 @@
 # Lottie WhatsApp Sticker Builder
 
+## Corrigido: o whatsapp corrigiu a falha que permitia utilizar imagens personalizadas no was, agora mesmo alterando a imagem nada acontece.
+
 Gera arquivos `.was` a partir de uma imagem e envia no WhatsApp usando templates Lottie com asset embutido em base64.
 
 Documentacao em ingles:
